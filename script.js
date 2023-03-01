@@ -1,18 +1,17 @@
 const settings = {
-    gameSizeX:20,
-    gameSizeY:20,
-    cellSize:20,
+    gameSizeX: 10,
+    gameSizeY: 10,
+    cellSize: 20,
+    speed: 300,
 }
-let direction = 'up';
+let direction = 'right';
 let directionChanged = false;
 let foodPos = [0,0];
-const snake = [[5,5],[5,6],[5,7]];
+const snake = [[4,2],[3,2],[2,2]];
 const gameFrame = document.querySelector('#game');
 const score = document.querySelector('#score span');
 const btnStart = document.querySelector('#btn-start');
 const gameOverPopup = document.querySelector('#game-over');
-
-
 const gameWrap = document.querySelector('#game-wrap');
 gameWrap.style.width = `${settings.gameSizeX*settings.cellSize}px`;
 
@@ -29,12 +28,18 @@ renderLevel(settings.gameSizeX, settings.gameSizeY, settings.cellSize);
 btnStart.addEventListener('click', runGame);
 
 function runGame(){
-    window.addEventListener('keydown', setDirection);
     btnStart.classList.add('hidden');
+    // arrows event
+    window.addEventListener('keydown', setDirection);
+    // swipe events
+    window.addEventListener('touchstart', touchStartCoordinates );
+    window.addEventListener('touchend', touchEndCoordinates );
+
+
     randomizeFoodPosition();
-    createFood();
     renderSnake();
-    gameInterval = setInterval(renderSnake, 300);
+
+    gameInterval = setInterval(renderSnake, settings.speed);
 }
 
 function setDirection(event) {
@@ -62,6 +67,33 @@ function setDirection(event) {
             break;
     }
     directionChanged = true;
+}
+
+let touchstartX = 0;
+let touchendX = 0;
+let touchstartY = 0;
+let touchendY = 0;
+function checkDirection() {
+    let difX = touchstartX - touchendX;
+    let difY = touchstartY - touchendY;
+    if (Math.abs(difX) > 10 && Math.abs(difX) > Math.abs(difY)) {
+        if (touchendX < touchstartX && direction !== 'right') {direction = 'left';}
+        if (touchendX > touchstartX && direction !== 'left') {direction = 'right';}
+    }
+    if (Math.abs(difY) > 10 && Math.abs(difY) > Math.abs(difX) ) {
+        if (touchendY < touchstartY && direction !== 'down') {direction = 'up';}
+        if (touchendY > touchstartY && direction !== 'up') {direction = 'down';}
+    }
+    directionChanged = true;
+}
+function touchStartCoordinates(event) {
+    touchstartX = event.changedTouches[0].screenX;
+    touchstartY = event.changedTouches[0].screenY;
+}
+function touchEndCoordinates(event) {
+    touchendX = event.changedTouches[0].screenX;
+    touchendY = event.changedTouches[0].screenY;
+    checkDirection();
 }
 
 function renderSnake(){
@@ -99,16 +131,13 @@ function renderSnake(){
     if (snake[0][0] === foodPos[0] && snake[0][1] === foodPos[1]){
         // eat food
         score.innerText = Number(score.innerText) + 1;
-        console.log(score.innerText);
         randomizeFoodPosition();
-        createFood();
     }
     else{
         // remove last item from array
         snake.splice(-1);
         createFood();
     }
-
 
     for (let i = 0; i < snake.length; i++){
         let snakePart = document.createElement("div");
@@ -125,11 +154,10 @@ function renderSnake(){
         gameFragment.append(snakePart);
     }
 
-
     gameFrame.innerHTML = '';
     gameFrame.append(gameFragment);
 
-    console.log(`Snake goes ${direction}`);
+    //console.log(`Snake goes ${direction}`);
 }
 
 function createFood(){
@@ -140,11 +168,36 @@ function createFood(){
     food.style.left = `${foodPos[0]*settings.cellSize}px`;
     food.style.top = `${foodPos[1]*settings.cellSize}px`;
     gameFragment.append(food);
+    //console.log('food spawn ' + foodPos);
 }
 
 function randomizeFoodPosition() {
-    foodPos[0] = randomNumber(0, settings.gameSizeX);
-    foodPos[1] = randomNumber(0, settings.gameSizeY);
+    const gameCells = []
+    for (let y = 0; y<settings.gameSizeY; y++){
+        for (let x = 0; x<settings.gameSizeX; x++){
+            gameCells.push([x, y])
+        }
+    }
+    console.log('snake' + snake);
+    let indexes = [];
+    snake.forEach(element => {
+            let index = element[1]*settings.gameSizeX + element[0];
+            indexes.push(index);
+        });
+    indexes.sort().reverse();
+    console.log(indexes);
+
+    indexes.forEach(element => {
+        console.log('remove: ' + gameCells[element]);
+        gameCells.splice(element, 1);
+    });
+
+    let newFoodCoordinates = gameCells[randomNumber(0, gameCells.length -1)];
+
+    foodPos[0] = newFoodCoordinates[0];
+    foodPos[1] = newFoodCoordinates[1];
+
+    createFood();
 }
 
 function gameOver(){
